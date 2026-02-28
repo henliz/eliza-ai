@@ -251,7 +251,7 @@ export default function Chat({ username }: ChatProps) {
                   <div key={i} style={{ display: 'flex', gap: '12px', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
 
                     {msg.role === 'assistant' && (
-                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle, #F9EFF4, #C8C6F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'var(--color-primary)', fontFamily: 'monospace', marginTop: '2px' }}>◈</div>
+                      <img src="/eliza_logo.png" alt="Eliza" style={{ flexShrink: 0, marginTop: '3px', borderRadius: '8px', width: '28px', height: '28px', objectFit: 'cover' }} />
                     )}
 
                     <div style={{ maxWidth: '78%', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -292,7 +292,7 @@ export default function Chat({ username }: ChatProps) {
                             <p style={{
                               whiteSpace: 'pre-wrap', margin: 0,
                               fontFamily: 'var(--font-mono)',
-                              color: '#00994d', fontSize: '13px',
+                              color: '#FFB670', fontSize: '13px',
                               lineHeight: '1.9', letterSpacing: '0.04em',
                             }}>
                               {isFinalCorrupted ? FRAGMENT_001_ATBASH + ' ▌' : corruptionDisplay}
@@ -316,7 +316,7 @@ export default function Chat({ username }: ChatProps) {
                             onClick={msg.hasAnomaly && !msg.corrupted && !isCorrupting ? () => triggerCorruption(i) : undefined}
                             title={msg.hasAnomaly && !msg.corrupted ? 'LUMEN' : undefined}
                           >
-                            {GLYPH}
+                            {GLYPH} anomaly
                           </span>
                         </div>
                       )}

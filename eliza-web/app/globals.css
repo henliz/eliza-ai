@@ -9,6 +9,7 @@
   --color-primary-border: rgba(161, 159, 238, 0.4);
   --color-text: #6B69A3;
   --color-text-faint: rgba(161, 159, 238, 0.5);
+  --color-orange: #FFB670;
   --radius-sm: 12px;
   --radius-md: 20px;
   --radius-lg: 28px;
@@ -33,9 +34,10 @@ body {
   position: relative;
 }
 
+/* Default glyph: orange, always present, low opacity */
 .eliza-glyph {
-  font-size: 10px;
-  color: var(--color-primary);
+  font-size: 12px;
+  color: var(--color-orange);
   position: absolute;
   bottom: 8px;
   right: 12px;
@@ -44,19 +46,107 @@ body {
   font-family: monospace;
   user-select: none;
   pointer-events: none;
+  letter-spacing: 0.04em;
+  transition: opacity 0.3s;
 }
 
-/* ── Streaming cursor ── */
+/* Active glyph: anomaly present — pulses orange → purple */
+.eliza-glyph.active {
+  opacity: 0.75;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: none;
+  animation: glyphPulse 2.4s ease-in-out infinite;
+}
+
+/* Done glyph: corruption revealed — underlined, static */
+.eliza-glyph.done {
+  color: var(--color-orange);
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+  text-decoration: underline;
+  animation: none;
+}
+
+@keyframes glyphPulse {
+  0%, 100% { color: var(--color-orange); opacity: 0.3; }
+  50%       { color: var(--color-primary); opacity: 0.9; }
+}
+
+/* Anomaly span — Type A (triple word) and Type C (zalgo): no visual marker */
+.eliza-anomaly {
+}
+
+/* Type B: one clause mid-sentence bleeds into monospace, then back */
+.eliza-anomaly.font-bleed {
+  font-family: var(--font-mono);
+  font-size: 0.93em;
+  letter-spacing: -0.02em;
+}
+
+/* Cipher resolved state */
+.cipher-resolved {
+  font-family: 'Space Mono', 'Courier New', monospace !important;
+  font-size: 13px !important;
+  color: var(--color-orange) !important;
+  line-height: 1.9 !important;
+  letter-spacing: 0.04em !important;
+  white-space: pre-wrap !important;
+}
+
+/* ── Markdown prose styles for ELIZA responses ── */
+.eliza-prose { font-size: 14px; line-height: 1.7; color: var(--color-text); }
+.eliza-prose p { margin: 0 0 0.75em; }
+.eliza-prose p:last-child { margin-bottom: 0; }
+.eliza-prose strong { font-weight: 600; color: var(--color-text); }
+.eliza-prose em { font-style: italic; }
+.eliza-prose h1, .eliza-prose h2, .eliza-prose h3 {
+  font-family: var(--font-serif);
+  color: var(--color-primary);
+  margin: 1em 0 0.4em;
+  font-weight: 400;
+}
+.eliza-prose h1 { font-size: 1.3em; }
+.eliza-prose h2 { font-size: 1.15em; }
+.eliza-prose h3 { font-size: 1em; }
+.eliza-prose ul, .eliza-prose ol { padding-left: 1.4em; margin: 0.5em 0; }
+.eliza-prose li { margin: 0.2em 0; }
+.eliza-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+}
+.eliza-prose pre {
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  overflow-x: auto;
+  margin: 0.75em 0;
+}
+.eliza-prose pre code { background: none; padding: 0; }
+.eliza-prose blockquote {
+  border-left: 2px solid var(--color-primary-border);
+  padding-left: 12px;
+  color: var(--color-text-faint);
+  margin: 0.5em 0;
+}
+.eliza-prose hr { border: none; border-top: 1px solid var(--color-primary-soft); margin: 1em 0; }
+
+/* ── Streaming cursor — orange to purple ── */
 .cursor-blink::after {
   content: '▋';
-  animation: blink 1s step-end infinite;
-  color: var(--color-primary);
+  animation: blink 1.2s ease-in-out infinite;
   font-size: 0.9em;
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%        { opacity: 1; color: var(--color-orange); }
+  50%       { opacity: 1; color: var(--color-primary); }
+  51%, 100% { opacity: 0; }
 }
 
 /* ── Fade-in animations ── */
