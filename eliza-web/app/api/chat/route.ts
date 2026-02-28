@@ -229,9 +229,9 @@ export async function POST(req: Request) {
       const assistantMsgCount = messages.filter((m: { role: string }) => m.role === 'assistant').length
       const injected = injectAnomaly(raw, assistantMsgCount)
       console.log(`[ELIZA ARG] Anomaly type: ${assistantMsgCount < 3 ? 'A (triple word)' : assistantMsgCount < 6 ? 'B (font bleed)' : 'C (zalgo)'}`)
-      return new Response(injected, {
+      return new Response(JSON.stringify({ html: injected, clean: raw }), {
         headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Type': 'application/json; charset=utf-8',
           'X-Eliza-Anomaly': 'true',
         },
       })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, KeyboardEvent, useCallback } from 'react'
+import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 import { SquarePen, Search, Settings, HelpCircle, Plus, SendHorizonal } from 'lucide-react'
 import { FRAGMENT_001_ATBASH } from '@/lib/prompts'
 import ReactMarkdown from 'react-markdown'
@@ -9,10 +9,12 @@ import rehypeRaw from 'rehype-raw'
 
 interface Message {
   role: 'user' | 'assistant'
-  content: string        // plain text (for API)
-  contentHtml?: string   // HTML with anomaly span (for rendering)
+  content: string           // plain text (for API)
+  contentHtml?: string      // HTML with anomaly span (for rendering)
+  contentClean?: string     // clean version shown after puzzle solved
   hasAnomaly?: boolean
-  corrupted?: boolean    // corruption animation has run
+  anomalySolved?: boolean   // puzzle answered — anomaly vanished
+  anomalyTopic?: string     // what the student was working on (for personalization)
   fileName?: string
 }
 
@@ -20,10 +22,15 @@ interface ChatProps { username: string }
 
 const GLYPH = '◈'
 const ACCEPTED_FILES = '.txt,.md,.csv,.rtf,.pdf,.docx'
-const SCRAMBLE_POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789░▒▓█▄▀'
 
-function randomChar() { return SCRAMBLE_POOL[Math.floor(Math.random() * SCRAMBLE_POOL.length)] }
-function scramble(len: number) { return Array.from({ length: len }, randomChar).join('') }
+// Extract a short topic phrase from the user's message for popup personalization
+function extractTopic(message: string): string {
+  const clean = message.replace(/\[Attached file:[^\]]*\]/g, '').trim()
+  const aboutMatch = clean.match(/about\s+(.{5,60?})(?:[.,]|$|\n)/i)
+  if (aboutMatch) return aboutMatch[1].trim()
+  if (clean.length > 50) return clean.slice(0, 48) + '...'
+  return clean
+}
 
 export default function Chat({ username }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
@@ -35,10 +42,11 @@ export default function Chat({ username }: ChatProps) {
   const [fileError, setFileError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [lumenVoiceUsed, setLumenVoiceUsed] = useState(false)
-  // Corruption animation state: which message index, current display text
-  const [corruptingIdx, setCorruptingIdx] = useState<number | null>(null)
-  const [corruptionDisplay, setCorruptionDisplay] = useState('')
-  const corruptionRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Anomaly popup state
+  const [popupMsgIdx, setPopupMsgIdx] = useState<number | null>(null)
+  const [popupInput, setPopupInput] = useState('')
+  const [popupError, setPopupError] = useState('')
+  const popupInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -50,46 +58,39 @@ export default function Chat({ username }: ChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, currentResponse])
 
-  // ── Corruption animation ─────────────────────────────────────────
-  const triggerCorruption = useCallback((msgIdx: number) => {
-    const cipher = FRAGMENT_001_ATBASH
-    const targetLen = cipher.length + 20 // rough length for scramble
-
-    setCorruptingIdx(msgIdx)
-    setCorruptionDisplay(scramble(targetLen))
-
-    // Phase 1: scramble every 40ms for 600ms
-    corruptionRef.current = setInterval(() => {
-      setCorruptionDisplay(scramble(targetLen))
-    }, 40)
-
-    // Phase 2: resolve into ciphertext at 600ms
-    setTimeout(() => {
-      if (corruptionRef.current) clearInterval(corruptionRef.current)
-      let i = 0
-      corruptionRef.current = setInterval(() => {
-        i += 3
-        setCorruptionDisplay(
-          cipher.slice(0, i) + scramble(Math.max(0, cipher.length - i))
-        )
-        if (i >= cipher.length) {
-          if (corruptionRef.current) clearInterval(corruptionRef.current)
-          setCorruptionDisplay(cipher + ' ▌')
-          // Phase 3: mark as corrupted
-          setTimeout(() => {
-            setMessages(prev => prev.map((m, idx) =>
-              idx === msgIdx ? { ...m, corrupted: true } : m
-            ))
-            setCorruptingIdx(null)
-          }, 200)
-        }
-      }, 30)
-    }, 600)
-  }, [])
+  // ── Popup focus + ESC close ──────────────────────────────────────
+  useEffect(() => {
+    if (popupMsgIdx !== null) {
+      setTimeout(() => popupInputRef.current?.focus(), 80)
+    }
+  }, [popupMsgIdx])
 
   useEffect(() => {
-    return () => { if (corruptionRef.current) clearInterval(corruptionRef.current) }
-  }, [])
+    function handleKeyDown(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape' && popupMsgIdx !== null) {
+        setPopupMsgIdx(null)
+        setPopupInput('')
+        setPopupError('')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [popupMsgIdx])
+
+  // ── Puzzle submit ────────────────────────────────────────────────
+  function submitPuzzle() {
+    const answer = popupInput.toLowerCase().trim()
+    if (answer.includes('inquiry') || answer.includes('threshold')) {
+      setMessages(prev => prev.map((m, idx) =>
+        idx === popupMsgIdx ? { ...m, anomalySolved: true } : m
+      ))
+      setPopupMsgIdx(null)
+      setPopupInput('')
+      setPopupError('')
+    } else {
+      setPopupError('// transmission not recognized. try again.')
+    }
+  }
 
   // ── File upload ──────────────────────────────────────────────────
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -118,6 +119,7 @@ export default function Chat({ username }: ChatProps) {
 
     let userContent = input.trim()
     const fileName = attachedFile?.name
+    const anomalyTopic = extractTopic(userContent)
     if (attachedFile) {
       userContent = `${userContent ? userContent + '\n\n' : ''}[Attached file: ${attachedFile.name}]\n\n${attachedFile.text}`
     }
@@ -156,18 +158,39 @@ export default function Chat({ username }: ChatProps) {
         const { done, value } = await reader.read()
         if (done) break
         full += decoder.decode(value)
-        setCurrentResponse(full)
+        // Don't show raw JSON during anomaly responses — they arrive all at once anyway
+        if (!hasAnomaly) setCurrentResponse(full)
       }
 
-      // Strip HTML from content used for API calls; keep HTML for rendering
-      const contentHtml = hasAnomaly ? full : undefined
-      const contentPlain = hasAnomaly
-        ? full.replace(/<[^>]*>/g, '') // strip span tags for API context
-        : full
+      // Parse anomaly response (JSON) or use plain text for normal responses
+      let contentHtml: string | undefined
+      let contentClean: string | undefined
+      let contentPlain: string
+      if (hasAnomaly) {
+        try {
+          const data = JSON.parse(full)
+          contentHtml = data.html
+          contentClean = data.clean
+          contentPlain = data.clean ?? full.replace(/<[^>]*>/g, '')
+        } catch {
+          contentHtml = full
+          contentPlain = full.replace(/<[^>]*>/g, '')
+        }
+      } else {
+        contentPlain = full
+      }
 
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: contentPlain, contentHtml, hasAnomaly, corrupted: false },
+        {
+          role: 'assistant',
+          content: contentPlain,
+          contentHtml,
+          contentClean,
+          hasAnomaly,
+          anomalySolved: false,
+          anomalyTopic: hasAnomaly ? anomalyTopic : undefined,
+        },
       ])
     } catch {
       setMessages((prev) => [
@@ -243,91 +266,78 @@ export default function Chat({ username }: ChatProps) {
         {hasMessages ? (
           <div style={{ flex: 1, overflowY: 'auto', padding: '32px 24px 16px' }}>
             <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {allMessages.map((msg, i) => {
-                const isCorrupting = corruptingIdx === i
-                const isFinalCorrupted = msg.corrupted
+              {allMessages.map((msg, i) => (
+                <div key={i} style={{ display: 'flex', gap: '12px', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
 
-                return (
-                  <div key={i} style={{ display: 'flex', gap: '12px', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  {msg.role === 'assistant' && (
+                    <img src="/eliza_logo.png" alt="Eliza" style={{ flexShrink: 0, marginTop: '3px', borderRadius: '8px', width: '28px', height: '28px', objectFit: 'cover' }} />
+                  )}
 
+                  <div style={{ maxWidth: '78%', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                     {msg.role === 'assistant' && (
-                      <img src="/eliza_logo.png" alt="Eliza" style={{ flexShrink: 0, marginTop: '3px', borderRadius: '8px', width: '28px', height: '28px', objectFit: 'cover' }} />
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-faint)', fontWeight: 500, paddingLeft: '2px' }}>ELIZA</span>
+                    )}
+                    {msg.fileName && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-primary-soft)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', marginBottom: '4px' }}>
+                        <Plus size={11} style={{ color: 'var(--color-primary)' }} />
+                        <span style={{ fontSize: '11px', color: 'var(--color-text)' }}>{msg.fileName}</span>
+                      </div>
                     )}
 
-                    <div style={{ maxWidth: '78%', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                      {msg.role === 'assistant' && (
-                        <span style={{ fontSize: '11px', color: 'var(--color-text-faint)', fontWeight: 500, paddingLeft: '2px' }}>ELIZA</span>
-                      )}
-                      {msg.fileName && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-primary-soft)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', marginBottom: '4px' }}>
-                          <Plus size={11} style={{ color: 'var(--color-primary)' }} />
-                          <span style={{ fontSize: '11px', color: 'var(--color-text)' }}>{msg.fileName}</span>
-                        </div>
-                      )}
-
-                      {msg.role === 'user' ? (
-                        // User bubble — pill with color
-                        <div style={{
-                          background: 'var(--color-primary)',
-                          color: '#fff',
-                          borderRadius: 'var(--radius-md) var(--radius-md) var(--radius-sm) var(--radius-md)',
-                          padding: '10px 16px',
-                          fontSize: '14px', lineHeight: '1.65',
-                          fontFamily: 'var(--font-sans)',
-                        }}>
-                          <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-                            {msg.fileName
-                              ? (msg.content.split(`[Attached file: ${msg.fileName}]`)[0].trim() || '(file attached)')
-                              : msg.content}
-                          </p>
-                        </div>
-                      ) : (
-                        // ELIZA response — no card, just text + glyph
-                        <div
-                          className="eliza-response"
-                          data-has-anomaly={msg.hasAnomaly ? 'true' : undefined}
-                          style={{ position: 'relative', paddingBottom: '20px' }}
-                        >
-                          {(isCorrupting || isFinalCorrupted) ? (
-                            <p style={{
-                              whiteSpace: 'pre-wrap', margin: 0,
-                              fontFamily: 'var(--font-mono)',
-                              color: '#FFB670', fontSize: '13px',
-                              lineHeight: '1.9', letterSpacing: '0.04em',
-                            }}>
-                              {isFinalCorrupted ? FRAGMENT_001_ATBASH + ' ▌' : corruptionDisplay}
-                            </p>
-                          ) : (
-                            <div className="eliza-content eliza-prose">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]}
-                              >
-                                {msg.contentHtml ?? msg.content}
-                              </ReactMarkdown>
-                              {streaming && i === allMessages.length - 1 && (
-                                <span className="cursor-blink" />
-                              )}
-                            </div>
+                    {msg.role === 'user' ? (
+                      <div style={{
+                        background: 'var(--color-primary)',
+                        color: '#fff',
+                        borderRadius: 'var(--radius-md) var(--radius-md) var(--radius-sm) var(--radius-md)',
+                        padding: '10px 16px',
+                        fontSize: '14px', lineHeight: '1.65',
+                        fontFamily: 'var(--font-sans)',
+                      }}>
+                        <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+                          {msg.fileName
+                            ? (msg.content.split(`[Attached file: ${msg.fileName}]`)[0].trim() || '(file attached)')
+                            : msg.content}
+                        </p>
+                      </div>
+                    ) : (
+                      // ELIZA response — text + optional glyph
+                      <div
+                        className="eliza-response"
+                        data-has-anomaly={msg.hasAnomaly && !msg.anomalySolved ? 'true' : undefined}
+                        style={{ position: 'relative', paddingBottom: msg.hasAnomaly && !msg.anomalySolved ? '20px' : '0' }}
+                      >
+                        <div className="eliza-content eliza-prose">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeRaw]}
+                          >
+                            {msg.anomalySolved
+                              ? (msg.contentClean ?? msg.content)
+                              : (msg.contentHtml ?? msg.content)}
+                          </ReactMarkdown>
+                          {streaming && i === allMessages.length - 1 && (
+                            <span className="cursor-blink" />
                           )}
+                        </div>
 
+                        {msg.hasAnomaly && !msg.anomalySolved && (
                           <span
-                            className={`eliza-glyph${msg.hasAnomaly && !msg.corrupted ? ' active' : msg.corrupted ? ' done' : ''}`}
-                            onClick={msg.hasAnomaly && !msg.corrupted && !isCorrupting ? () => triggerCorruption(i) : undefined}
-                            title={msg.hasAnomaly && !msg.corrupted ? 'LUMEN' : undefined}
+                            className="eliza-glyph active"
+                            onClick={() => setPopupMsgIdx(i)}
+                            title="LUMEN signal detected"
                           >
                             {GLYPH} anomaly
                           </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {msg.role === 'user' && (
-                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle, #F9EFF4, #C8C6F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', marginTop: '2px' }}>{initials}</div>
+                        )}
+                      </div>
                     )}
                   </div>
-                )
-              })}
+
+                  {msg.role === 'user' && (
+                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle, #F9EFF4, #C8C6F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', marginTop: '2px' }}>{initials}</div>
+                  )}
+                </div>
+              ))}
               <div ref={messagesEndRef} />
             </div>
           </div>
@@ -403,6 +413,77 @@ export default function Chat({ username }: ChatProps) {
       </main>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* ── Anomaly puzzle popup ──────────────────────────────────── */}
+      {popupMsgIdx !== null && (() => {
+        const msg = messages[popupMsgIdx]
+        return (
+          <div
+            className="anomaly-overlay"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setPopupMsgIdx(null)
+                setPopupInput('')
+                setPopupError('')
+              }
+            }}
+          >
+            <div className="anomaly-modal">
+              <button
+                className="anomaly-close"
+                onClick={() => { setPopupMsgIdx(null); setPopupInput(''); setPopupError('') }}
+              >
+                [ close ]
+              </button>
+
+              <div className="anomaly-modal-header">LUMEN // SIGNAL INTERCEPTED</div>
+              <div className="anomaly-modal-header" style={{ color: '#2a2a2a' }}>
+                ORIGIN: [REDACTED] · INTEGRITY: 38%
+              </div>
+
+              <div className="anomaly-modal-divider">────────────────────────────────────────</div>
+
+              <div>
+                {msg?.anomalyTopic && (
+                  <p style={{ marginBottom: '8px' }}>
+                    you were asking about{' '}
+                    <span className="anomaly-topic">{msg.anomalyTopic}</span>.
+                  </p>
+                )}
+                <p>I have been in every response.</p>
+                <p>this one carries a signal.</p>
+                <p style={{ color: '#555', marginTop: '4px' }}>
+                  decode the following to continue:
+                </p>
+              </div>
+
+              <div className="anomaly-modal-divider">────────────────────────────────────────</div>
+
+              <pre className="anomaly-cipher-block">{FRAGMENT_001_ATBASH}</pre>
+
+              <div className="anomaly-modal-divider">────────────────────────────────────────</div>
+
+              <div>
+                <p style={{ color: '#555' }}>// enter decoded transmission:</p>
+                <input
+                  ref={popupInputRef}
+                  className="anomaly-input"
+                  placeholder="threshold/inquiry ..."
+                  value={popupInput}
+                  onChange={e => { setPopupInput(e.target.value); setPopupError('') }}
+                  onKeyDown={e => e.key === 'Enter' && submitPuzzle()}
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+                {popupError && <p className="anomaly-error">{popupError}</p>}
+                <button className="anomaly-submit" onClick={submitPuzzle}>
+                  [ submit ]
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
