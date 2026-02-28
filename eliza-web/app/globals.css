@@ -404,6 +404,23 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-primary-soft); border-radius: 99px; }
 
+/* ── Mirror cipher word tokens ── */
+.mirror-word {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background 100ms, color 100ms;
+}
+.mirror-word:hover {
+  background: var(--color-primary-soft);
+}
+.mirror-word.selected {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  text-decoration: underline;
+  text-decoration-color: rgba(161, 159, 238, 0.45);
+}
+
 /* ── LUMEN fragment pulse ── */
 @keyframes fragmentPulse {
   0%, 100% { opacity: 0.7; }

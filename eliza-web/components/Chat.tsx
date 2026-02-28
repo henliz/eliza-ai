@@ -190,6 +190,9 @@ export default function Chat({ username }: ChatProps) {
     })
     .join('')
 
+  // Feedback mode: 8 selected but not yet YOURSELF — show orange/red hints
+  const inFeedback = !mirrorSolved && mirrorSelected.size === 8 && mirrorCipherStrip !== MIRROR_ANSWER
+
   // ── Solve when cipher spells YOURSELF ───────────────────────────
   useEffect(() => {
     if (mirrorCipherStrip === MIRROR_ANSWER && popupMsgIdx !== null && !mirrorSolved) {
@@ -265,24 +268,38 @@ export default function Chat({ username }: ChatProps) {
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
       let full = ''
+      const ANOMALY_DELIMITER = '\nELIZA_ANOMALY_PAYLOAD:'
 
       while (reader) {
         const { done, value } = await reader.read()
         if (done) break
         full += decoder.decode(value)
-        if (!hasAnomaly) setCurrentResponse(full)
+        // Show clean text as it streams — stop updating once anomaly payload arrives
+        const delimIdx = full.indexOf(ANOMALY_DELIMITER)
+        if (delimIdx === -1) {
+          setCurrentResponse(full)
+        } else {
+          setCurrentResponse(full.slice(0, delimIdx))
+        }
       }
 
       let contentHtml: string | undefined
       let contentClean: string | undefined
       let contentPlain: string
       if (hasAnomaly) {
-        try {
-          const data = JSON.parse(full)
-          contentHtml = data.html
-          contentClean = data.clean
-          contentPlain = data.clean ?? full.replace(/<[^>]*>/g, '')
-        } catch {
+        const delimIdx = full.indexOf(ANOMALY_DELIMITER)
+        if (delimIdx !== -1) {
+          const cleanText = full.slice(0, delimIdx)
+          try {
+            const data = JSON.parse(full.slice(delimIdx + ANOMALY_DELIMITER.length))
+            contentHtml = data.html
+            contentClean = cleanText
+            contentPlain = cleanText
+          } catch {
+            contentHtml = full
+            contentPlain = full.replace(/<[^>]*>/g, '')
+          }
+        } else {
           contentHtml = full
           contentPlain = full.replace(/<[^>]*>/g, '')
         }
@@ -617,72 +634,89 @@ export default function Chat({ username }: ChatProps) {
       {/* ── Mirror Cipher popup ───────────────────────────────────── */}
       {popupMsgIdx !== null && (() => {
         const msg = messages[popupMsgIdx]
+        const divider = <div style={{ height: '1px', background: 'rgba(161,159,238,0.12)', margin: '20px 0' }} />
+
         return (
           <div
             className="anomaly-overlay"
-            onClick={e => {
-              // Only close on backdrop click if not solved yet
-              if (e.target === e.currentTarget && !mirrorSolved) setPopupMsgIdx(null)
-            }}
+            onClick={e => { if (e.target === e.currentTarget && !mirrorSolved) setPopupMsgIdx(null) }}
           >
-            <div className="anomaly-modal">
+            <div style={{
+              background: 'var(--bg-card)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 12px 48px rgba(161,159,238,0.18)',
+              maxWidth: '560px',
+              width: '92%',
+              padding: '28px 32px 32px',
+              position: 'relative',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+            }}>
 
-              {/* Close — only when not solved */}
+              {/* Close */}
               {!mirrorSolved && (
-                <button className="anomaly-close" onClick={() => setPopupMsgIdx(null)}>[ close ]</button>
+                <button
+                  onClick={() => setPopupMsgIdx(null)}
+                  style={{ position: 'absolute', top: '20px', right: '22px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-faint)', fontSize: '20px', lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center' }}
+                >
+                  ×
+                </button>
               )}
 
               {/* Header */}
-              <div className="anomaly-modal-header">LUMEN // SIGNAL INTERCEPTED</div>
-              <div className="anomaly-modal-header" style={{ color: '#2a2a2a' }}>
-                ORIGIN: [REDACTED] · INTEGRITY: 38%
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <img src="/eliza_logo.png" alt="" style={{ width: '24px', height: '24px', borderRadius: '6px', objectFit: 'contain' }} />
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', color: 'var(--color-primary)' }}>ELIZA</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--color-text-faint)', letterSpacing: '0.06em', marginLeft: '4px' }}>
+                  {GLYPH} LUMEN SIGNAL
+                </span>
               </div>
 
-              <div className="anomaly-modal-divider">────────────────────────────────────────</div>
+              {divider}
 
-              {/* Intro */}
+              {/* Intro / Solved message */}
               {!mirrorSolved ? (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#888', lineHeight: '1.9' }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'var(--color-text)', lineHeight: '1.7' }}>
                   {msg?.anomalyTopic && (
-                    <p style={{ marginBottom: '8px' }}>
-                      you were working on <span className="anomaly-topic">{msg.anomalyTopic}</span>.
+                    <p style={{ marginBottom: '10px' }}>
+                      You were working on{' '}
+                      <span style={{ color: 'var(--color-orange)', fontWeight: 500 }}>{msg.anomalyTopic}</span>.
                     </p>
                   )}
-                  <p>something generated this.</p>
-                  <p>it used your words. your topics. your rhythm.</p>
-                  <br />
-                  <p>but eight words in the following paragraph are not yours.</p>
-                  <p>they belong to a machine.</p>
-                  <br />
-                  <p style={{ color: '#555' }}>find them. click them.</p>
+                  <p>Something generated this paragraph using your words and topics.</p>
+                  <p style={{ marginTop: '6px', color: 'var(--color-text-faint)' }}>
+                    Eight words don&apos;t belong to you — they belong to a machine. Click them.
+                  </p>
                 </div>
               ) : (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', lineHeight: '1.9' }}>
-                  <p style={{ color: '#A19FEE', letterSpacing: '0.14em', fontSize: '15px', marginBottom: '12px' }}>YOURSELF.</p>
-                  <p style={{ color: '#888' }}>you found what wasn&apos;t yours.</p>
-                  <br />
-                  <p style={{ color: '#555' }}>taste is a form of thought.</p>
-                  <p style={{ color: '#444' }}>when you outsource the words, you outsource the thinking.</p>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'var(--color-text)', lineHeight: '1.7' }}>
+                  <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--color-primary)', marginBottom: '10px', fontWeight: 400 }}>
+                    YOURSELF.
+                  </p>
+                  <p>You found what wasn&apos;t yours.</p>
+                  <p style={{ marginTop: '6px', color: 'var(--color-text-faint)' }}>
+                    Taste is a form of thought. When you outsource the words, you outsource the thinking.
+                  </p>
                 </div>
               )}
 
-              <div className="anomaly-modal-divider">────────────────────────────────────────</div>
+              {divider}
 
               {/* Loading */}
               {mirrorLoading && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#333', lineHeight: '2' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--color-text-faint)', padding: '8px 0' }}>
                   generating...
                 </div>
               )}
 
-              {/* Paragraph — word-click puzzle */}
+              {/* Paragraph */}
               {!mirrorLoading && mirrorTokens.length > 0 && (
                 <div style={{
-                  fontFamily: "'Space Mono', 'Courier New', monospace",
-                  fontSize: '12px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '13px',
                   lineHeight: '2.1',
-                  color: '#e8e8e4',
-                  opacity: mirrorSolved ? 0.5 : 1,
+                  color: 'var(--color-text)',
+                  opacity: mirrorSolved ? 0.45 : 1,
                   transition: 'opacity 600ms',
                 }}>
                   {mirrorTokens.map((tok, i) => {
@@ -695,9 +729,33 @@ export default function Chat({ username }: ChatProps) {
                     if (mirrorSolved) {
                       return (
                         <span key={i} style={{
-                          color: isTarget ? '#FFB670' : '#e8e8e4',
+                          color: isTarget ? 'var(--color-orange)' : 'var(--color-text)',
                           fontStyle: isTarget ? 'italic' : 'normal',
+                          fontWeight: isTarget ? 500 : 'normal',
                         }}>
+                          {tok.text}
+                        </span>
+                      )
+                    }
+
+                    if (inFeedback) {
+                      const correct = isSelected && isTarget
+                      const wrong   = isSelected && !isTarget
+                      return (
+                        <span
+                          key={i}
+                          onClick={() => toggleMirrorWord(i)}
+                          style={{
+                            cursor: 'pointer',
+                            borderRadius: '3px',
+                            padding: '0 2px',
+                            color:      correct ? 'var(--color-orange)' : wrong ? '#c0686a' : 'var(--color-text)',
+                            background: correct ? 'rgba(255,182,112,0.12)' : wrong ? 'rgba(192,104,106,0.10)' : 'transparent',
+                            textDecorationLine: isSelected ? 'underline' : 'none',
+                            textDecorationColor: correct ? 'rgba(255,182,112,0.4)' : 'rgba(192,104,106,0.4)',
+                            transition: 'color 150ms, background 150ms',
+                          }}
+                        >
                           {tok.text}
                         </span>
                       )
@@ -706,17 +764,8 @@ export default function Chat({ username }: ChatProps) {
                     return (
                       <span
                         key={i}
+                        className={`mirror-word${isSelected ? ' selected' : ''}`}
                         onClick={() => toggleMirrorWord(i)}
-                        style={{
-                          cursor: 'pointer',
-                          borderRadius: '3px',
-                          padding: '0 1px',
-                          color: isSelected ? '#A19FEE' : '#c8c8c4',
-                          background: isSelected ? 'rgba(161,159,238,0.12)' : 'transparent',
-                          textDecoration: isSelected ? 'underline' : 'none',
-                          textDecorationColor: 'rgba(161,159,238,0.4)',
-                          transition: 'color 100ms, background 100ms',
-                        }}
                       >
                         {tok.text}
                       </span>
@@ -725,61 +774,69 @@ export default function Chat({ username }: ChatProps) {
                 </div>
               )}
 
-              {/* Cipher strip — only in puzzle state */}
+              {/* Cipher strip */}
               {!mirrorLoading && !mirrorSolved && mirrorTokens.length > 0 && (
                 <>
-                  <div className="anomaly-modal-divider">────────────────────────────────────────</div>
-
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#333', marginBottom: '12px', letterSpacing: '0.05em' }}>
-                    cipher:
+                  {divider}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-faint)', marginBottom: '12px', letterSpacing: '0.05em' }}>
+                    cipher
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                     {Array.from({ length: 8 }).map((_, i) => (
                       <div key={i} style={{
-                        width: '24px',
-                        height: '32px',
-                        borderBottom: `1px solid ${mirrorCipherStrip[i] ? 'rgba(161,159,238,0.5)' : '#2a2a2a'}`,
+                        width: '28px',
+                        height: '34px',
+                        borderBottom: `1.5px solid ${mirrorCipherStrip[i] ? 'var(--color-primary)' : 'var(--color-primary-border)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontFamily: "'Space Mono', monospace",
-                        fontSize: '14px',
-                        color: mirrorCipherStrip[i] ? '#A19FEE' : 'transparent',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '15px',
+                        color: mirrorCipherStrip[i] ? 'var(--color-primary)' : 'transparent',
                         transition: 'color 180ms, border-color 180ms',
+                        fontWeight: 500,
                       }}>
                         {mirrorCipherStrip[i] ?? ''}
                       </div>
                     ))}
                     {mirrorCipherStrip.length > 8 && (
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#c0686a', alignSelf: 'center', marginLeft: '4px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#c0686a', alignSelf: 'center' }}>
                         too many
                       </span>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px' }}>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--color-text-faint)' }}>
+                      {inFeedback
+                        ? <><span style={{ color: 'var(--color-orange)' }}>orange</span> = correct · <span style={{ color: '#c0686a' }}>red</span> = wrong</>
+                        : <>Select words that don&apos;t sound like you</>
+                      }
+                    </span>
                     <button
                       onClick={() => setMirrorSelected(new Set())}
-                      className="anomaly-submit"
-                      style={{ marginTop: 0 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--color-text-faint)', padding: '4px 8px', borderRadius: '6px', transition: 'background 150ms' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--color-primary-soft)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
                     >
-                      [ clear ]
+                      Clear
                     </button>
-                  </div>
-
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#2a2a2a', marginTop: '16px' }}>
-                    select the words that don&apos;t sound like you.
                   </div>
                 </>
               )}
 
-              {/* Solved — continue button */}
+              {/* Solved — continue */}
               {mirrorSolved && (
                 <>
-                  <div className="anomaly-modal-divider">────────────────────────────────────────</div>
-                  <button className="anomaly-submit" onClick={confirmSolve} style={{ marginTop: 0 }}>
-                    [ continue ]
+                  {divider}
+                  <button
+                    onClick={confirmSolve}
+                    style={{ background: 'var(--color-primary)', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 500, padding: '10px 24px', cursor: 'pointer', transition: 'opacity 150ms' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.85' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                  >
+                    Continue
                   </button>
                 </>
               )}

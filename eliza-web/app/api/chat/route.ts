@@ -250,19 +250,37 @@ export async function POST(req: Request) {
     // ── Generate response ─────────────────────────────────────────────
 
     if (isOffloading) {
-      const completion = await client.chat.completions.create({
+      // Stream clean text in real-time, then append anomaly payload after delimiter
+      const stream = await client.chat.completions.create({
         model: 'gpt-4o',
         max_tokens: 1024,
-        stream: false,
+        stream: true,
         messages: [{ role: 'system', content: ELIZA_CHARACTER }, ...messages],
       })
-      const raw = completion.choices[0]?.message?.content ?? ''
       const assistantMsgCount = messages.filter((m: { role: string }) => m.role === 'assistant').length
-      const injected = injectAnomaly(raw, assistantMsgCount)
-      console.log(`[ELIZA ARG] Anomaly type: ${assistantMsgCount < 3 ? 'A (transmission)' : assistantMsgCount < 6 ? 'B (font bleed)' : 'C (zalgo)'}`)
-      return new Response(JSON.stringify({ html: injected, clean: raw }), {
+
+      let fullText = ''
+      const readable = new ReadableStream({
+        async start(controller) {
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content ?? ''
+            if (text) {
+              fullText += text
+              controller.enqueue(new TextEncoder().encode(text))
+            }
+          }
+          // Inject anomaly into the complete text, append after delimiter
+          const injected = injectAnomaly(fullText, assistantMsgCount)
+          console.log(`[ELIZA ARG] Anomaly appended after stream (msg ${assistantMsgCount})`)
+          const payload = '\nELIZA_ANOMALY_PAYLOAD:' + JSON.stringify({ html: injected })
+          controller.enqueue(new TextEncoder().encode(payload))
+          controller.close()
+        },
+      })
+
+      return new Response(readable, {
         headers: {
-          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Type': 'text/plain; charset=utf-8',
           'X-Eliza-Anomaly': 'true',
         },
       })

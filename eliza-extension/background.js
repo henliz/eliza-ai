@@ -44,8 +44,8 @@ async function openElizaWindow() {
   const win = await chrome.windows.create({
     url,
     type: "popup",      // separate app-like window
-    width: 480,
-    height: 720,
+    width: 960,
+    height: 640,
     focused: true
   });
 
