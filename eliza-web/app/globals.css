@@ -43,11 +43,7 @@ body {
   cursor: default;
   font-family: monospace;
   user-select: none;
-  transition: opacity 0.2s;
-}
-
-.eliza-glyph:hover {
-  opacity: 0.8;
+  pointer-events: none;
 }
 
 /* ── Streaming cursor ── */
