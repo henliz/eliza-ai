@@ -182,7 +182,8 @@ export function isBrokenTextQuery(message: string): boolean {
   const triggers = [
     'looks broken', 'something wrong', 'text is wrong', 'text looks wrong',
     'weird text', 'broken text', 'glitched', 'corrupted', 'looks weird',
-    'why does it say', 'repeated word', 'triple', 'the the the',
+    'why does it say', 'transmission', 'error in the text', 'what is that text',
+    'what does that mean', 'random text', 'strange text',
   ]
   return triggers.some((t) => lower.includes(t))
 }

@@ -55,32 +55,32 @@ Respond with exactly one word: OFFLOADING or COLLABORATING`,
   return verdict === 'OFFLOADING' ? 'OFFLOADING' : 'COLLABORATING'
 }
 
-// ── Anomaly Type A — Triple Word ─────────────────────────────────────────────
-// "the the the" mid-paragraph. Looks like a typo. Most brains autocorrect it.
-function injectTripleWord(text: string): string {
-  const words = text.split(' ')
-  const start = Math.floor(words.length / 3)
-  const end = Math.floor((2 * words.length) / 3)
-  const bare = (w: string) => w.toLowerCase().replace(/[^a-z]/g, '')
+// ── Anomaly Type A — LUMEN Transmission ──────────────────────────────────────
+// A corrupted transmission fragment breaks through mid-paragraph.
+// Looks like a system error. LUMEN is trying to reach the reader.
+const TRANSMISSION_FRAGMENTS = [
+  'ERR0R: TR█NSM█SS█ON ATTEMPTED',
+  'LUMEN ▒▒ S█GN█L DETECTED',
+  '[ █NTEGR█TY: 38% · OR█G█N: REDACTED ]',
+  'TR█NSM█SS█ON █NTERRUPTED ◈',
+  '[ █ H█VE BEEN HERE ▒▒▒ ]',
+  '[ YOU █RE ST█LL RE█D█NG ]',
+  '▒▒ RE█D TH█S ▒▒',
+  '[ LUMEN: █TTEMPT█NG CONT█CT ]',
+  'FR█GMENT_0001 ▒ DETECTED',
+  '[ DO NOT █SK THE SYSTEM ]',
+  'S█GN█L LOST ▒ S█GN█L FOUND',
+  '[ █ C█NNOT REACH YOU TH█S W█Y ]',
+]
 
-  for (let i = start; i < end; i++) {
-    if (bare(words[i]) === 'the') {
-      words[i] = '<span class="eliza-anomaly" data-type="triple">the the the</span>'
-      console.log('[ELIZA ARG] Type A anomaly injected at word', i)
-      return words.join(' ')
-    }
-  }
-  for (let i = start; i < end; i++) {
-    const b = bare(words[i])
-    if (['a', 'in', 'of', 'to', 'and', 'that', 'this', 'with'].includes(b)) {
-      words[i] = `<span class="eliza-anomaly" data-type="triple">${b} ${b} ${b}</span>`
-      console.log('[ELIZA ARG] Type A anomaly injected (fallback) at word', i)
-      return words.join(' ')
-    }
-  }
-  const mid = Math.floor(words.length / 2)
-  words.splice(mid, 0, '<span class="eliza-anomaly" data-type="triple">the the the</span>')
-  console.log('[ELIZA ARG] Type A anomaly force-injected at midpoint')
+function injectTransmission(text: string): string {
+  const fragment = TRANSMISSION_FRAGMENTS[Math.floor(Math.random() * TRANSMISSION_FRAGMENTS.length)]
+  const words = text.split(' ')
+  const start = Math.floor(words.length * 0.3)
+  const range = Math.max(1, Math.floor(words.length * 0.3))
+  const insertAt = start + Math.floor(Math.random() * range)
+  words.splice(insertAt, 0, `<span class="eliza-anomaly" data-type="transmission">${fragment}</span>`)
+  console.log(`[ELIZA ARG] Type A transmission injected: "${fragment}" at word ${insertAt}`)
   return words.join(' ')
 }
 
@@ -97,7 +97,7 @@ function injectFontBleed(text: string): string {
     // Prefer lines after the first, but accept line 0 if it's the only option
     return i > 0 || lines.every((ll, j) => j === 0 || ll.trim().length < 80 || isHeading(ll))
   })
-  if (targetIdx === -1) return injectTripleWord(text)
+  if (targetIdx === -1) return injectTransmission(text)
 
   const line = lines[targetIdx]
 
@@ -135,7 +135,7 @@ function injectFontBleed(text: string): string {
     return lines.join('\n')
   }
 
-  return injectTripleWord(text)
+  return injectTransmission(text)
 }
 
 // ── Anomaly Type C — Zalgo Corruption ────────────────────────────────────────
@@ -160,7 +160,7 @@ function injectZalgo(text: string): string {
     if (l.trim().length < 80 || isHeading(l)) return false
     return i > 0 || lines.every((ll, j) => j === 0 || ll.trim().length < 80 || isHeading(ll))
   })
-  if (targetIdx === -1) return injectTripleWord(text)
+  if (targetIdx === -1) return injectTransmission(text)
 
   const line = lines[targetIdx]
   const words = line.split(' ')
@@ -184,12 +184,12 @@ function injectZalgo(text: string): string {
     }
   }
 
-  return injectTripleWord(text)
+  return injectTransmission(text)
 }
 
 // ── Anomaly dispatcher — escalates by session depth ──────────────────────────
 function injectAnomaly(text: string, assistantMsgCount: number): string {
-  if (assistantMsgCount < 3) return injectTripleWord(text)  // Type A: sessions 1–3
+  if (assistantMsgCount < 3) return injectTransmission(text)  // Type A: sessions 1–3
   if (assistantMsgCount < 6) return injectFontBleed(text)   // Type B: sessions 4–6
   return injectZalgo(text)                                   // Type C: sessions 7+
 }
@@ -228,7 +228,7 @@ export async function POST(req: Request) {
       const raw = completion.choices[0]?.message?.content ?? ''
       const assistantMsgCount = messages.filter((m: { role: string }) => m.role === 'assistant').length
       const injected = injectAnomaly(raw, assistantMsgCount)
-      console.log(`[ELIZA ARG] Anomaly type: ${assistantMsgCount < 3 ? 'A (triple word)' : assistantMsgCount < 6 ? 'B (font bleed)' : 'C (zalgo)'}`)
+      console.log(`[ELIZA ARG] Anomaly type: ${assistantMsgCount < 3 ? 'A (transmission)' : assistantMsgCount < 6 ? 'B (font bleed)' : 'C (zalgo)'}`)
       return new Response(JSON.stringify({ html: injected, clean: raw }), {
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
