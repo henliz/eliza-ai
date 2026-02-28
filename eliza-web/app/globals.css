@@ -1,40 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f5f5f0;
-  --surface: #ffffff;
-  --border: #e5e5e0;
-  --text: #1a1a1a;
-  --text-muted: #888880;
-  --accent: #5a6fa5;
-  --accent-light: #eef1f8;
-  --user-bubble: #1a1a1a;
-  --user-text: #ffffff;
+  --bg-sidebar: #F9EFF4;
+  --bg-main: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --color-primary: #A19FEE;
+  --color-primary-soft: rgba(161, 159, 238, 0.15);
+  --color-primary-border: rgba(161, 159, 238, 0.4);
+  --color-text: #6B69A3;
+  --color-text-faint: rgba(161, 159, 238, 0.5);
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --shadow-card: 0 4px 24px rgba(161, 159, 238, 0.10);
+  --shadow-card-hover: 0 8px 32px rgba(161, 159, 238, 0.18);
+  --font-serif: 'DM Serif Display', serif;
+  --font-sans: 'DM Sans', sans-serif;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  min-height: 100vh;
+  background: var(--bg-main);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  height: 100vh;
   overflow: hidden;
 }
 
-/* ELIZA response bubble — contract with Dev B */
+/* ── ELIZA response bubble — contract with Dev B ── */
 .eliza-response {
   position: relative;
 }
 
-/* Glyph — Dev B targets this */
 .eliza-glyph {
   font-size: 10px;
-  color: #ccc;
+  color: var(--color-primary);
   position: absolute;
-  bottom: 6px;
-  right: 10px;
-  opacity: 0.5;
+  bottom: 8px;
+  right: 12px;
+  opacity: 0.3;
   cursor: default;
   font-family: monospace;
   user-select: none;
@@ -42,14 +47,14 @@ body {
 }
 
 .eliza-glyph:hover {
-  opacity: 1;
+  opacity: 0.8;
 }
 
-/* Blinking cursor during stream */
+/* ── Streaming cursor ── */
 .cursor-blink::after {
   content: '▋';
   animation: blink 1s step-end infinite;
-  color: var(--accent);
+  color: var(--color-primary);
   font-size: 0.9em;
 }
 
@@ -58,7 +63,31 @@ body {
   50%       { opacity: 0; }
 }
 
-/* Scrollbar */
+/* ── Fade-in animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fadeUp 600ms ease both;
+}
+
+.fade-up-delay {
+  animation: fadeUp 600ms ease 150ms both;
+}
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: var(--color-primary-soft); border-radius: 99px; }
+
+/* ── LUMEN fragment pulse ── */
+@keyframes fragmentPulse {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1; }
+}
+
+.fragment-pulse {
+  animation: fragmentPulse 2s ease-in-out infinite;
+}

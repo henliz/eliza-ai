@@ -27,36 +27,37 @@ export default function SSOLogin({ onLogin }: SSOLoginProps) {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#f5f5f0]">
-
-      {/* Top bar */}
-      <div className="fixed top-0 left-0 right-0 h-11 bg-white border-b border-[#e5e5e0] flex items-center px-6">
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md bg-[#5a6fa5] flex items-center justify-center">
-            <span className="text-white text-xs font-mono">◈</span>
-          </div>
-          <span className="text-sm font-semibold text-[#1a1a1a] tracking-tight">ELIZA</span>
-        </div>
-        <span className="ml-3 text-xs text-[#aaa]">by MOSAIC University</span>
-      </div>
+    <div style={{
+      height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', background: 'var(--bg-sidebar)',
+    }}>
 
       {/* Card */}
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-[#e5e5e0] overflow-hidden">
+      <div style={{
+        width: '100%', maxWidth: '400px',
+        background: 'var(--bg-card)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-card-hover)',
+        overflow: 'hidden',
+      }}>
 
-        <div className="px-8 pt-8 pb-6">
-          <div className="flex items-center gap-2.5 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-[#5a6fa5] flex items-center justify-center">
-              <span className="text-white text-sm font-mono">◈</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[#1a1a1a]">Sign in to ELIZA</p>
-              <p className="text-xs text-[#aaa]">University AI Portal · LUMEN Project</p>
-            </div>
+        <div style={{ padding: '36px 32px 28px' }}>
+          {/* Logo */}
+          <div style={{ marginBottom: '28px' }}>
+            <h1 style={{
+              fontFamily: 'var(--font-serif)', fontSize: '24px',
+              color: 'var(--color-primary)', fontWeight: 400, marginBottom: '4px',
+            }}>ELIZA</h1>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-faint)' }}>
+              University AI Portal · LUMEN Project
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label className="block text-xs font-medium text-[#555] mb-1.5">University NetID</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>
+                University NetID
+              </label>
               <input
                 type="text"
                 value={username}
@@ -64,24 +65,45 @@ export default function SSOLogin({ onLogin }: SSOLoginProps) {
                 placeholder="e.g. jsmith24"
                 autoComplete="username"
                 autoFocus
-                className="w-full border border-[#e5e5e0] rounded-xl text-sm px-3.5 py-2.5 outline-none focus:border-[#5a6fa5] focus:ring-2 focus:ring-[#5a6fa5]/10 transition text-[#1a1a1a] placeholder:text-[#ccc]"
+                style={{
+                  width: '100%', border: '2px solid var(--color-primary-border)',
+                  borderRadius: 'var(--radius-md)', fontSize: '14px',
+                  padding: '10px 14px', outline: 'none', fontFamily: 'var(--font-sans)',
+                  color: 'var(--color-text)', background: 'var(--bg-main)',
+                  transition: 'border-color 200ms',
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--color-primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--color-primary-border)'}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#555] mb-1.5">Password</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>
+                Password
+              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="w-full border border-[#e5e5e0] rounded-xl text-sm px-3.5 py-2.5 outline-none focus:border-[#5a6fa5] focus:ring-2 focus:ring-[#5a6fa5]/10 transition text-[#1a1a1a] placeholder:text-[#ccc]"
+                style={{
+                  width: '100%', border: '2px solid var(--color-primary-border)',
+                  borderRadius: 'var(--radius-md)', fontSize: '14px',
+                  padding: '10px 14px', outline: 'none', fontFamily: 'var(--font-sans)',
+                  color: 'var(--color-text)', background: 'var(--bg-main)',
+                  transition: 'border-color 200ms',
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--color-primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--color-primary-border)'}
               />
             </div>
 
             {error && (
-              <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5">
+              <div style={{
+                fontSize: '12px', color: '#c0686a', background: '#fff0f0',
+                border: '1px solid #f0c0c0', borderRadius: 'var(--radius-sm)', padding: '10px 14px',
+              }}>
                 {error}
               </div>
             )}
@@ -89,31 +111,39 @@ export default function SSOLogin({ onLogin }: SSOLoginProps) {
             <button
               type="submit"
               disabled={loading || !username.trim()}
-              className="w-full mt-1 bg-[#1a1a1a] hover:bg-[#333] text-white text-sm font-medium py-2.5 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                marginTop: '4px', background: 'var(--color-primary)', border: 'none',
+                borderRadius: 'var(--radius-md)', color: '#fff', fontFamily: 'var(--font-sans)',
+                fontSize: '14px', fontWeight: 500, padding: '12px', cursor: 'pointer',
+                transition: 'opacity 200ms', opacity: (loading || !username.trim()) ? 0.5 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
             >
               {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
-                </span>
-              ) : (
-                'Continue with SSO'
-              )}
+                <>
+                  <div style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  Signing in…
+                </>
+              ) : 'Continue with SSO'}
             </button>
           </form>
         </div>
 
-        <div className="px-8 py-4 bg-[#fafaf8] border-t border-[#e5e5e0] flex justify-between">
-          <span className="text-[11px] text-[#bbb]">Forgot password → x4400</span>
-          <span className="text-[11px] text-[#bbb]">LUMEN v0.9.1</span>
+        <div style={{
+          padding: '14px 32px', background: 'var(--bg-sidebar)',
+          borderTop: '1px solid rgba(161,159,238,0.15)',
+          display: 'flex', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-faint)' }}>Forgot password → IT x4400</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-faint)' }}>LUMEN v0.9.1</span>
         </div>
       </div>
 
-      {/* Footer */}
-      <p className="mt-6 text-xs text-[#bbb]">
+      <p style={{ marginTop: '24px', fontSize: '11px', color: 'var(--color-text-faint)' }}>
         © {new Date().getFullYear()} MOSAIC University · Office of Information Technology
       </p>
 
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
