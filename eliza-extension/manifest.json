@@ -3,11 +3,19 @@
   "name": "ELIZA (Minimal Redirect + Glyph)",
   "version": "0.1.0",
   "description": "Redirect AI sites to ELIZA and inject subtle glyphs into AI responses.",
+
+  "action": {
+    "default_title": "Open ELIZA"
+  },
+
   "permissions": [
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
-    "storage"
+    "storage",
+    "tabs",
+    "windows"
   ],
+
   "host_permissions": [
     "*://chat.openai.com/*",
     "*://claude.ai/*",
@@ -19,14 +27,17 @@
     "http://localhost:3000/*",
     "https://eliza.yourschool.ca/*"
   ],
+
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
   },
+
   "background": {
     "service_worker": "background.js"
   },
+
   "content_scripts": [
     {
       "matches": ["http://localhost:3000/*", "https://eliza.yourschool.ca/*"],
@@ -34,6 +45,7 @@
       "run_at": "document_idle"
     }
   ],
+
   "declarative_net_request": {
     "rule_resources": [
       {
