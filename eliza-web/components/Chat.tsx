@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
-import { SquarePen, Search, Settings, HelpCircle, Plus, SendHorizonal } from 'lucide-react'
+import { SquarePen, Search, Settings, HelpCircle, Plus, SendHorizonal, Folder, FolderPlus, LogOut, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 import { FRAGMENT_001_ATBASH } from '@/lib/prompts'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -41,6 +41,7 @@ export default function Chat({ username }: ChatProps) {
   const [fileLoading, setFileLoading] = useState(false)
   const [fileError, setFileError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [accountCardOpen, setAccountCardOpen] = useState(false)
   const [lumenVoiceUsed, setLumenVoiceUsed] = useState(false)
   // Anomaly popup state
   const [popupMsgIdx, setPopupMsgIdx] = useState<number | null>(null)
@@ -220,37 +221,127 @@ export default function Chat({ username }: ChatProps) {
 
       {/* Sidebar */}
       {sidebarOpen && (
-        <aside style={{ width: '280px', flexShrink: 0, background: 'var(--bg-sidebar)', padding: '24px 16px', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(161,159,238,0.1)' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--color-primary)' }}>ELIZA</span>
-              <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', opacity: 0.6, fontSize: '14px', padding: '4px' }}>‹</button>
+        <aside style={{ width: '280px', flexShrink: 0, background: 'var(--bg-sidebar)', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(161,159,238,0.12)' }}>
+
+          {/* Scrollable content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+
+            {/* Logo row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <img src="/eliza_logo.png" alt="" style={{ height: '28px', width: '28px', objectFit: 'contain', borderRadius: '6px' }} />
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--color-primary)' }}>ELIZA</span>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                style={{ background: 'none', border: '1px solid var(--color-primary-border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--color-primary)', padding: '4px 6px', display: 'flex', alignItems: 'center', opacity: 0.7 }}
+              >
+                <ChevronLeft size={14} />
+              </button>
             </div>
+
+            {/* New chat */}
             <button
               onClick={() => { setMessages([]); setInput(''); setAttachedFile(null) }}
-              style={{ width: '100%', background: 'var(--bg-card)', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-card)', color: 'var(--color-primary)', fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 500, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: 'box-shadow 200ms, transform 200ms', marginBottom: '8px' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)' }}
+              style={{ width: '100%', background: '#FFFFFF', border: 'none', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-card)', color: 'var(--color-orange)', fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 500, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)' }}
             >
-              <SquarePen size={15} /> New chat
+              <SquarePen size={15} color="var(--color-orange)" />
+              <span>New chat</span>
             </button>
-            <button style={{ width: '100%', background: 'none', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-faint)', fontFamily: 'var(--font-sans)', fontSize: '14px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <Search size={15} /> Search
+
+            {/* Search */}
+            <button
+              style={{ width: '100%', background: 'none', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)', fontFamily: 'var(--font-sans)', fontSize: '14px', padding: '9px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', textAlign: 'left' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.35)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+            >
+              <Search size={15} />
+              <span>Search</span>
             </button>
+
+            {/* Divider */}
+            <div style={{ height: '1px', background: 'rgba(161,159,238,0.15)', margin: '4px 0' }} />
+
+            {/* Projects section */}
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '0 4px', marginBottom: '2px' }}>Projects</p>
+              {[
+                { icon: <FolderPlus size={15} />, label: 'New Project' },
+                { icon: <Folder size={15} />,    label: 'Untitled'    },
+              ].map(({ icon, label }) => (
+                <button
+                  key={label}
+                  style={{ width: '100%', background: 'none', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)', fontFamily: 'var(--font-sans)', fontSize: '14px', padding: '9px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', textAlign: 'left' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.35)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+                >
+                  {icon}
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: '1px', background: 'rgba(161,159,238,0.15)', margin: '4px 0' }} />
+
+            {/* Your chats section */}
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '0 4px', marginBottom: '2px' }}>Your chats</p>
+              {['Chat 1', 'Chat 2', 'Chat 3', 'Chat 4', 'Chat 5'].map(name => (
+                <button
+                  key={name}
+                  style={{ width: '100%', background: 'none', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)', fontFamily: 'var(--font-sans)', fontSize: '14px', padding: '9px 12px', display: 'block', cursor: 'pointer', textAlign: 'left' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.35)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-card)', padding: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle, #F9EFF4, #C8C6F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--color-primary)' }}>{initials}</div>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{username}</div>
-                <div style={{ fontSize: '11px', color: 'var(--color-text-faint)', lineHeight: 1.4 }}>{email}</div>
+
+          {/* Account card — sits above the bottom bar */}
+          {accountCardOpen && (
+            <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-card)', margin: '0 12px 8px', padding: '16px 20px' }}>
+              {/* Avatar + name + email */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle, #F9EFF4, #C8C6F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--color-primary)' }}>{initials}</div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-orange)', lineHeight: 1.2 }}>{username}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-faint)', lineHeight: 1.4 }}>{email}</div>
+                </div>
               </div>
+              <div style={{ height: '1px', background: 'rgba(161,159,238,0.2)', marginBottom: '8px' }} />
+              {[
+                { icon: <Settings size={15} />,   label: 'Settings'  },
+                { icon: <HelpCircle size={15} />, label: 'Help'      },
+                { icon: <LogOut size={15} />,     label: 'Sign out'  },
+              ].map(({ icon, label }) => (
+                <div
+                  key={label}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', margin: '0 -8px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--color-text)', fontFamily: 'var(--font-sans)', fontSize: '14px', transition: 'background 150ms' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--color-primary-soft)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                >
+                  {icon}
+                  <span>{label}</span>
+                </div>
+              ))}
             </div>
-            <div style={{ height: '1px', background: 'rgba(161,159,238,0.2)', marginBottom: '12px' }} />
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', opacity: 0.7, padding: '2px' }}><Settings size={16} /></button>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', opacity: 0.7, padding: '2px' }}><HelpCircle size={16} /></button>
-            </div>
+          )}
+
+          {/* Bottom bar — toggles account card */}
+          <div
+            onClick={() => setAccountCardOpen(o => !o)}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', cursor: 'pointer', borderTop: '1px solid rgba(161,159,238,0.12)', transition: 'background 150ms' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.3)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+          >
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle, #F9EFF4, #C8C6F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)' }}>{initials}</div>
+            <span style={{ fontSize: '14px', color: 'var(--color-text)', fontFamily: 'var(--font-sans)', flex: 1 }}>{username}</span>
+            <MoreHorizontal size={16} color="var(--color-text-faint)" />
           </div>
         </aside>
       )}
@@ -259,7 +350,9 @@ export default function Chat({ username }: ChatProps) {
       <main style={{ flex: 1, background: 'var(--bg-main)', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
         {!sidebarOpen && (
-          <button onClick={() => setSidebarOpen(true)} style={{ position: 'absolute', top: '16px', left: '16px', background: 'var(--bg-card)', border: 'none', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-card)', color: 'var(--color-primary)', cursor: 'pointer', padding: '6px 10px', fontSize: '14px', zIndex: 10 }}>›</button>
+          <button onClick={() => setSidebarOpen(true)} style={{ position: 'absolute', top: '16px', left: '16px', background: 'var(--bg-card)', border: '1px solid var(--color-primary-border)', borderRadius: '8px', boxShadow: 'var(--shadow-card)', color: 'var(--color-primary)', cursor: 'pointer', padding: '5px 7px', display: 'flex', alignItems: 'center', zIndex: 10 }}>
+            <ChevronRight size={14} />
+          </button>
         )}
 
         {/* Messages */}

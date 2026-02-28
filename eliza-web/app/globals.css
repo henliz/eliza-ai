@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --bg-sidebar: #F9EFF4;
+  --bg-sidebar: linear-gradient(180deg, #F5C9B3 0%, #F9EFF4 40%, #C8C6F7 100%);
   --bg-main: #FAFAFA;
   --bg-card: #FFFFFF;
   --color-primary: #A19FEE;
@@ -29,6 +29,56 @@ body {
   height: 100vh;
   overflow: hidden;
 }
+
+/* ── Sidebar rows ── */
+.sidebar-row {
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms;
+}
+.sidebar-row:hover { background: rgba(255,255,255,0.35); }
+
+.sidebar-chat-row {
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  display: block;
+  transition: background 150ms;
+}
+.sidebar-chat-row:hover { background: rgba(255,255,255,0.35); }
+
+.account-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  margin: 0 -8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  transition: background 150ms;
+}
+.account-card-row:hover { background: var(--color-primary-soft); }
 
 /* ── ELIZA response bubble — contract with Dev B ── */
 .eliza-response {
