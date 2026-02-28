@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "ELIZA (Minimal Redirect + Glyph)",
+  "version": "0.1.0",
+  "description": "Redirect AI sites to ELIZA and inject subtle glyphs into AI responses.",
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://chat.openai.com/*",
+    "*://claude.ai/*",
+    "*://gemini.google.com/*",
+    "*://perplexity.ai/*",
+    "*://copilot.microsoft.com/*",
+    "*://poe.com/*",
+    "*://chatgpt.com/*",
+    "http://localhost:3000/*",
+    "https://eliza.yourschool.ca/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://localhost:3000/*", "https://eliza.yourschool.ca/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}

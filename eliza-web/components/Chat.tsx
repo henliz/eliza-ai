@@ -16,6 +16,7 @@ interface ChatProps {
 const GLYPH = '◈'
 const ACCEPTED_FILES = '.txt,.md,.csv,.rtf,.pdf,.docx'
 
+
 export default function Chat({ username }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
