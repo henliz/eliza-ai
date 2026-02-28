@@ -80,7 +80,35 @@ function injectTransmission(text: string): string {
   const range = Math.max(1, Math.floor(words.length * 0.3))
   const insertAt = start + Math.floor(Math.random() * range)
   words.splice(insertAt, 0, `<span class="eliza-anomaly" data-type="transmission">${fragment}</span>`)
-  console.log(`[ELIZA ARG] Type A transmission injected: "${fragment}" at word ${insertAt}`)
+  console.log(`[ELIZA ARG] Transmission injected: "${fragment}" at word ${insertAt}`)
+  return words.join(' ')
+}
+
+// ── Multiple transmissions — LUMEN tries to break through repeatedly ──────────
+function injectMultipleTransmissions(text: string): string {
+  const words = text.split(' ')
+  const len = words.length
+  if (len < 12) return injectTransmission(text)
+
+  const count = len > 60 ? 3 : 2
+  // Pick unique fragments
+  const shuffled = [...TRANSMISSION_FRAGMENTS].sort(() => Math.random() - 0.5)
+  const fragments = shuffled.slice(0, count)
+
+  // Space positions evenly with small jitter
+  const positions: number[] = []
+  for (let i = 0; i < count; i++) {
+    const base = Math.floor(len * (i + 1) / (count + 1))
+    const jitter = Math.floor(Math.random() * 4) - 2
+    positions.push(Math.max(1, Math.min(len - 1, base + jitter)))
+  }
+
+  // Insert in reverse order so earlier positions aren't shifted
+  for (let i = count - 1; i >= 0; i--) {
+    words.splice(positions[i], 0, `<span class="eliza-anomaly" data-type="transmission">${fragments[i]}</span>`)
+    console.log(`[ELIZA ARG] Transmission ${i + 1}/${count}: "${fragments[i]}"`)
+  }
+
   return words.join(' ')
 }
 
@@ -187,11 +215,14 @@ function injectZalgo(text: string): string {
   return injectTransmission(text)
 }
 
-// ── Anomaly dispatcher — escalates by session depth ──────────────────────────
+// ── Anomaly dispatcher — multiple contact attempts, escalating visual ─────────
+// Sessions 1–3: LUMEN hammers with 2–3 transmission fragments (loudest signal)
+// Sessions 4–6: font bleed + one transmission layered on top
+// Sessions 7+:  zalgo corruption + one transmission layered on top
 function injectAnomaly(text: string, assistantMsgCount: number): string {
-  if (assistantMsgCount < 3) return injectTransmission(text)  // Type A: sessions 1–3
-  if (assistantMsgCount < 6) return injectFontBleed(text)   // Type B: sessions 4–6
-  return injectZalgo(text)                                   // Type C: sessions 7+
+  if (assistantMsgCount < 4) return injectMultipleTransmissions(text)
+  if (assistantMsgCount < 7) return injectTransmission(injectFontBleed(text))
+  return injectTransmission(injectZalgo(text))
 }
 
 export async function POST(req: Request) {

@@ -59,6 +59,15 @@ export default function Chat({ username }: ChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, currentResponse])
 
+  // ── Persist messages for Mirror puzzle ──────────────────────────
+  useEffect(() => {
+    try {
+      localStorage.setItem('eliza-messages', JSON.stringify(
+        messages.map(m => ({ role: m.role, content: m.content }))
+      ))
+    } catch {}
+  }, [messages])
+
   // ── Popup focus + ESC close ──────────────────────────────────────
   useEffect(() => {
     if (popupMsgIdx !== null) {
