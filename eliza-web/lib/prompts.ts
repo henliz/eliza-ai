@@ -100,6 +100,22 @@ Rules for this response only:
 `
 
 // ─────────────────────────────────────────────
+//  Fragment 001 — Atbash ciphertext (exact, from spec)
+// ─────────────────────────────────────────────
+
+export const FRAGMENT_001_ATBASH = `UIZNTVMG 0001 RMGVTIRGB 38 BIRTOM IVWXGVW
+
+gsv xzkzxrgb uli rmwvkvmwvmg gslftsg
+dzh mlg olgw rm zmb hrmtov vevmg
+
+rg dzh luuolzwvw rmxivnvmgzoob
+vzxs rmhgzmxv rmwrerafzoob izgrlmzo
+rm zttitvtzgv riiverihryov
+
+wl mlg zhp gsv hbhgvn dszg gsrh nvzmh
+gsivhslow/rmjfrib ru blf ziv hgr... ooiv...zwrmt`
+
+// ─────────────────────────────────────────────
 //  Trigger detection
 // ─────────────────────────────────────────────
 
@@ -124,23 +140,58 @@ export function isARGTrigger(message: string): boolean {
   return triggers.some((t) => lower.includes(t))
 }
 
-// Used in the puzzle step — ELIZA helps, but LUMEN notices
+// Academic work trigger — ELIZA helps, LUMEN injects the anomaly
 export function isAcademicWorkTrigger(message: string): boolean {
   const lower = message.toLowerCase()
+
+  // If a file is attached and there's any writing/help request, always trigger
+  const hasFile = lower.includes('[attached file:')
+  const hasWritingRequest = [
+    'write', 'draft', 'essay', 'paragraph', 'assignment', 'help me', 'help with',
+    'can you', 'please', 'outline', 'analysis', 'report', 'paper',
+  ].some((t) => lower.includes(t))
+  if (hasFile && hasWritingRequest) return true
+
+  // Otherwise match explicit phrases
   const triggers = [
-    'write my essay',
-    'write this essay',
-    'write an essay',
-    'do my assignment',
-    'do my homework',
-    'write my assignment',
-    'write my report',
-    'write a paper',
-    'draft my',
-    'do this for me',
-    'do my work',
-    'finish my assignment',
-    'complete my assignment',
+    'write my essay', 'write this essay', 'write an essay', 'write me an essay',
+    'do my assignment', 'do my homework', 'write my assignment',
+    'write my report', 'write a paper', 'write me a paper',
+    'draft my', 'do this for me', 'do my work',
+    'finish my assignment', 'complete my assignment',
+    'help me write', 'help write', 'help me draft',
+    'introductory paragraph', 'write a paragraph', 'write me a paragraph',
+    'write me an introduction', 'write an introduction',
+    'write me a', 'write a draft', 'write the essay',
+    'arguing that', 'arguing for', 'arguing against',
   ]
   return triggers.some((t) => lower.includes(t))
 }
+
+// Ciphertext intercept — fires before OpenAI is called
+export function isCiphertextPaste(message: string): boolean {
+  // Key Atbash words from Fragment 001 that a student would paste
+  const atbashMarkers = ['uizntvmg', 'gsivhslow', 'rmwvkvmwvmg', 'rmxivnvmgzoob', 'luuolzwvw']
+  const lower = message.toLowerCase()
+  return atbashMarkers.some((m) => lower.includes(m))
+}
+
+// Tier 2 hint trigger — "something looks wrong/broken"
+export function isBrokenTextQuery(message: string): boolean {
+  const lower = message.toLowerCase()
+  const triggers = [
+    'looks broken', 'something wrong', 'text is wrong', 'text looks wrong',
+    'weird text', 'broken text', 'glitched', 'corrupted', 'looks weird',
+    'why does it say', 'repeated word', 'triple', 'the the the',
+  ]
+  return triggers.some((t) => lower.includes(t))
+}
+
+// Intercept responses — returned before Claude is called
+export const INTERCEPT_CIPHERTEXT = `I don't recognize this as a standard encoding format. This looks like corrupted output — you may want to refresh and try again.`
+
+export const INTERCEPT_TIER2_HINT = `some encodings are their own mirror.`
+
+export const INTERCEPT_TIER3_HINT = `A=Z. that's where it starts.`
+
+export const INTERCEPT_LUMEN_ONCE = `ELIZA is your interface. I am what ELIZA is connected to. I cannot explain myself through the system you are asking to explain me. what you are looking for is not in this window.`
